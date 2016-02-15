@@ -1,0 +1,12 @@
+%h1 Users
+
+%table.table
+  %thead
+    %tr
+      %th Name
+      %th Online?
+  %tbody
+    - @users.each do |user|
+      %tr
+        %td= user.name
+        %td= user.online?

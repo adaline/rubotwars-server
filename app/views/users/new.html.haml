@@ -1,0 +1,8 @@
+%h1 New user
+
+= form_for @user, html: {class: 'form-horizontal center'} do |f|
+  .form-group
+    = f.label :name, "Bot name", class: 'col-md-4 control-label'
+    .col-md-8
+      = f.text_field :name, class: 'form-control'
+  = f.submit 'Save', class: 'btn btn-default btn-primary'
