@@ -1,4 +1,10 @@
-class User < ApplicationRecord
+class Bot
+  def initialize
+    @name = name
+    @key = key
+    @x = 0
+    @y = 0
+  end
   validates_presence_of :name
   validates_presence_of :key
 

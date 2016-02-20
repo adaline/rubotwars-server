@@ -11,18 +11,5 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160215115511) do
-
-  create_table "users", force: :cascade do |t|
-    t.string   "name"
-    t.string   "key"
-    t.boolean  "online",     default: false
-    t.string   "next_move"
-    t.datetime "created_at",                 null: false
-    t.datetime "updated_at",                 null: false
-  end
-
-  add_index "users", ["key"], name: "index_users_on_key"
-  add_index "users", ["online"], name: "index_users_on_online"
-
+ActiveRecord::Schema.define(version: 0) do
 end

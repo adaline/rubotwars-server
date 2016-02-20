@@ -4,17 +4,13 @@ module ApplicationCable
     identified_by :current_user
 
     def connect
-      self.current_user = find_verified_user
+      # reject_unauthorized_connection unless verify_connection
     end
 
     protected
 
-    def find_verified_user
-      if request.key? 'HTTP_USER_KEY'
-        User.find_by(key: request.headers['HTTP_USER_KEY'])
-      else
-        reject_unauthorized_connection
-      end
+    def verify_connection
+      request.key?('HTTP_USER_KEY') && User.find_by(key: request.headers['HTTP_USER_KEY'])
     end
   end
 end

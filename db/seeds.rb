@@ -5,5 +5,3 @@
 #
 #   movies = Movie.create([{ name: 'Star Wars' }, { name: 'Lord of the Rings' }])
 #   Character.create(name: 'Luke', movie: movies.first)
-User.create(name: 'FactoryBot', key: 'a37717f37f8d2f8ea355')
-User.create(name: 'DoomSpec', key: 'a6715afbd291f71bdb52')
