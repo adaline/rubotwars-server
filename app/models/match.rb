@@ -1,6 +1,6 @@
 class Match
-  def initialize(user1, user2)
-    map = [
+  def initialize
+    @map = [
       [1,0,0,0,9,0,0,0],
       [0,0,0,9,0,0,0,0],
       [0,0,0,0,0,0,0,0],
@@ -10,10 +10,23 @@ class Match
       [0,0,0,0,0,0,0,0],
       [0,9,0,0,0,0,0,1]
     ]
-    @users = [user1, user2]
+    @players = []
   end
 
-  def tick
-    @users.each(&:perform) if active?
+  def add_player(bot)
+    @players << bot
+    start if @players.count == 2
+  end
+
+  def perform_move(player)
+  end
+
+  def start
+    loop do
+      @players.each do |player|
+        break if player.dead?
+        perform_move player
+      end
+    end
   end
 end
