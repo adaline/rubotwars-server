@@ -1,11 +1,13 @@
 class Bot
   attr_reader :name, :key
-  
+  attr_accessor :x, :y, :direction
+
   def initialize(name, key)
     @name = name
     @key = key
     @x = 0
     @y = 0
+    @direction = [:left, :right, :up, :down].sample
     @lives = 3
     @moves = []
   end
@@ -13,6 +15,7 @@ class Bot
   def start
     MatchChannel.broadcast_to(self, 'action' => 'start')
   end
+
 
   def next_move
     loop do

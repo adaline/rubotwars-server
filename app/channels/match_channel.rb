@@ -1,7 +1,6 @@
 class MatchChannel < ApplicationCable::Channel
   def subscribed
     stream_for bot
-    MatchChannel.broadcast_to(bot, 'action' => 'start')
   end
 
   def unsubscribed
@@ -9,11 +8,13 @@ class MatchChannel < ApplicationCable::Channel
 
   def scan
     log 'Scanning'
-    MatchChannel.broadcast_to(bot, 'action' => 'response', 'result' => 'empty')
+    bot.add_move(action: :scan)
+    MatchChannel.broadcast_to(bot, 'action' => 'response', 'result' => ['empty', 'enemy', 'wall'].sample)
   end
 
   def turn(data)
     log 'Turning'
+    p data
     MatchChannel.broadcast_to(bot, 'action' => 'response', 'result' => true)
   end
 
