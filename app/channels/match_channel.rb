@@ -1,39 +1,41 @@
 class MatchChannel < ApplicationCable::Channel
   def subscribed
     stream_for bot
+    Seek.create(bot)
   end
 
   def unsubscribed
+    Seek.remove(bot)
   end
 
   def scan
     log 'Scanning'
-    bot.add_move(action: :scan)
-    MatchChannel.broadcast_to(bot, 'action' => 'response', 'result' => ['empty', 'enemy', 'wall'].sample)
+    match.scan(fresh_bot)
   end
 
   def turn(data)
     log 'Turning'
-    p data
-    MatchChannel.broadcast_to(bot, 'action' => 'response', 'result' => true)
+    match.turn(fresh_bot, data['direction'].to_sym)
   end
 
   def move_forward
     log 'Moving'
-    MatchChannel.broadcast_to(bot, 'action' => 'response', 'result' => true)
+    match.move_forward(fresh_bot)
   end
 
   def fire
     log 'Firing'
-    MatchChannel.broadcast_to(bot, 'action' => 'response', 'result' => true)
+    match.fire(fresh_bot)
   end
 
   private
 
-  def bot
-    Rails.cache.fetch("rubot/#{bot.key}", expires_in: 1.hour) do
-      Bot.new(bot.name, bot.key)
-    end
+  def fresh_bot
+    Bot.load(bot.key)
+  end
+
+  def match
+    Match.load
   end
 
   def log(info)
