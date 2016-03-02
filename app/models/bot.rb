@@ -27,14 +27,15 @@ class Bot
     if directon == :left
       new_index = current_index - 1
       if new_index < 0
-        new_index = DIRECTIONS.length
+        new_index = DIRECTIONS.length - 1
       end
     else
       new_index = current_index + 1
-      if new_index > DIRECTIONS.length
+      if new_index > DIRECTIONS.length - 1
         new_index = 0
       end
     end
+    puts "New directoion index: #{new_index}"
     @direction = DIRECTIONS[new_index]
   end
 

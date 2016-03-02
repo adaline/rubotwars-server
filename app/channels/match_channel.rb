@@ -10,7 +10,9 @@ class MatchChannel < ApplicationCable::Channel
 
   def scan
     log 'Scanning'
-    match.scan(fresh_bot)
+    local_bot = fresh_bot
+    local_bot.result = match.scan(local_bot)
+    local_bot.save
   end
 
   def turn(data)

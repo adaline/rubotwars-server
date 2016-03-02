@@ -1,6 +1,5 @@
 class Match
   attr_accessor :bots, :bot_keys
-  attr_reader :last_move_key
 
   def initialize(bots)
     @map = [
@@ -17,7 +16,6 @@ class Match
     @map_height = 7
     @bots = bots
     @bot_keys = []
-    @last_move_key = nil
   end
 
   def start
@@ -26,12 +24,15 @@ class Match
       x = row.index(1)
       positions << [x, y] if x
     end
+
     positions.each_with_index do |position, index|
       b = @bots[index]
       b.x = position[0]
       b.y = position[1]
       b.save
-      @bots[index] = b
+    end
+
+    @bots.each do |b|
       MatchChannel.broadcast_to(b, 'action' => 'start')
     end
 
@@ -39,14 +40,27 @@ class Match
 
     Thread.new do
       loop do
-        Rails.logger.debug 'Queue tick'
-        Match.load.bots.each do |m_bot|
-          if m_bot.result.present?
-            MatchChannel.broadcast_to(m_bot, 'action' => 'response', 'result' => m_bot.result.to_s)
-            m_bot.result = nil
-            m_bot.save
+        last_move_index = REDIS.get('rubot_last_move').to_i
+
+        bots = Match.load.bots
+        bots.each do |b|
+          if b.dead?
+            Rails.logger.debug "Game over! #{b.name} is dead"
+            Match.remove
+            Thread.exit
           end
         end
+
+        next_move_by = (last_move_index == 1) ? 0 : 1
+        next_bot = bots[next_move_by]
+        if next_bot.result.present?
+          MatchChannel.broadcast_to(next_bot, 'action' => 'response', 'result' => next_bot.result.to_s)
+          next_bot.result = nil
+          next_bot.save
+        end
+
+        REDIS.set('rubot_last_move', next_move_by)
+
         sleep 1
       end
     end
@@ -57,71 +71,71 @@ class Match
     case bot.direction
     when 'left'
       if bot.x == 0
-        bot.result = :wall
+        return :wall
       else
         front_tile = @map[bot.y][bot.x - 1]
         if front_tile == 0 || front_tile == 1
           op = other_bot(bot)
           if op.x == bot.x - 1 && op.y = bot.y
-            bot.result = :enemy
+            return :enemy
           else
-            bot.result = :empty
+            return :empty
           end
         elsif front_tile == 9
-          bot.result = :wall
+          return :wall
         end
       end
     when 'right'
       if bot.x == @map_width
-        bot.result = :wall
+        return :wall
       else
         front_tile = @map[bot.y][bot.x + 1]
         if front_tile == 0 || front_tile == 1
           op = other_bot(bot)
           if op.x == bot.x + 1 && op.y = bot.y
-            bot.result = :enemy
+            return :enemy
           else
-            bot.result = :empty
+            return :empty
           end
         elsif front_tile == 9
-          bot.result = :wall
+          return :wall
         end
       end
     when 'up'
       if bot.y == 0
-        bot.result = :wall
+        return :wall
       else
         front_tile = @map[bot.y - 1][bot.x]
         if front_tile == 0 || front_tile == 1
           op = other_bot(bot)
           if op.x == bot.x && op.y = bot.y - 1
-            bot.result = :enemy
+            return :enemy
           else
-            bot.result = :empty
+            return :empty
           end
         elsif front_tile == 9
-          bot.result = :wall
+          return :wall
         end
       end
     when 'down'
       if bot.y == @map_height
-        bot.result = :wall
+        return :wall
       else
         front_tile = @map[bot.y + 1][bot.x]
         if front_tile == 0 || front_tile == 1
           op = other_bot(bot)
           if op.x == bot.x && op.y = bot.y + 1
-            bot.result = :enemy
+            return :enemy
           else
-            bot.result = :empty
+            return :empty
           end
         elsif front_tile == 9
-          bot.result = :wall
+          return :wall
         end
       end
+    else
+      puts "Unknown bot direction: #{bot.direction}"
     end
-    bot.save
-    @last_move_key = bot.key
   end
 
   def fire(bot)
@@ -130,7 +144,6 @@ class Match
     end
     bot.result = true
     bot.save
-    @last_move_key = bot.key
   end
 
   def move_forward(bot)
@@ -154,7 +167,6 @@ class Match
         move(bot, 0, +1)
       end
     end
-    @last_move_key = bot.key
   end
 
   def turn(bot, direction)
@@ -175,6 +187,11 @@ class Match
     loaded_match
   end
 
+  def self.remove
+    Match.load.bot_keys.each { |key| REDIS.del("rubot/#{key}") }
+    REDIS.del('rubot_match')
+  end
+
   private
 
   def other_bot(bot)
@@ -183,6 +200,7 @@ class Match
 
   def damage(bot)
     bot.lives -= 1
+    puts "Bot taking damage, life is at #{bot.lives}!"
     bot.save
   end
 

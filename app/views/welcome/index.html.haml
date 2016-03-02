@@ -1,1 +1,23 @@
-%h1 Rubot Arena
+:sass
+  #game_canvas:-webkit-full-screen
+    width: 100%
+    height: auto
+
+:coffeescript
+  $ ->
+    canvas = document.getElementById("game_canvas")
+
+    $('#full_screen_link').on 'click', ->
+      canvas.webkitRequestFullscreen()
+
+    context = canvas.getContext("2d")
+    context.clearRect(0, 0, canvas.width, canvas.height)
+
+    bg_image = new Image()
+    bg_image.src = "#{image_url("bg.png")}"
+    bg_image.onload = ->
+      context.drawImage(bg_image, 0, 0)
+
+%canvas#game_canvas{ width: '650', height: '480'}
+
+%a#full_screen_link Full screen
