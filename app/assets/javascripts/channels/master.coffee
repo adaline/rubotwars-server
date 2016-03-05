@@ -14,14 +14,20 @@ App.masterChannel = App.cable.subscriptions.create "MasterChannel",
     canvas = document.getElementById("game_canvas")
     switch data.status
       when 'start'
-        console.log 'Starting'
         event = new CustomEvent "start", { detail: { bots: data.bots, map: data.map }, bubbles: true, cancelable: true }
         canvas.dispatchEvent(event)
       when 'update'
-        console.log 'Updating'
         event = new CustomEvent "update", { detail: { bots: data.bots, map: data.map }, bubbles: true, cancelable: true }
         canvas.dispatchEvent(event)
       when 'game_over'
-        console.log 'Game Over'
-        event = new CustomEvent "game_over"
+        event = new CustomEvent "game_over", { detail: { winner: data.winner}, bubbles: true, cancelable: true }
+        canvas.dispatchEvent(event)
+      when 'scan'
+        event = new CustomEvent "scan", { detail: { bot: data.bot }, bubbles: true, cancelable: true }
+        canvas.dispatchEvent(event)
+      when 'fire'
+        event = new CustomEvent "fire", { detail: { bot: data.bot }, bubbles: true, cancelable: true }
+        canvas.dispatchEvent(event)
+      when 'turn'
+        event = new CustomEvent "turn", { detail: { bot: data.bot, direction: data.direction }, bubbles: true, cancelable: true }
         canvas.dispatchEvent(event)

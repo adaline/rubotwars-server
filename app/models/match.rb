@@ -3,17 +3,17 @@ class Match
 
   def initialize(bots)
     @map = [
-      [1,0,0,0,9,0,0,0],
-      [0,0,0,9,0,0,0,0],
-      [0,0,0,0,0,0,0,0],
-      [0,0,9,9,9,9,0,0],
-      [0,0,0,0,0,0,0,0],
-      [0,0,0,9,9,0,0,0],
-      [0,0,0,0,0,0,0,0],
-      [0,9,0,0,0,0,0,1]
+      [1,0,0,9,0,0,0,0,0,0],
+      [0,0,0,9,0,0,0,9,0,0],
+      [0,0,1,9,0,0,0,0,0,0],
+      [9,9,9,9,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,9,0,0,0,0,9,0,0],
+      [0,0,0,0,0,0,0,0,0,0]
     ]
-    @map_width = 7
-    @map_height = 7
     @bots = bots
     @bot_keys = []
   end
@@ -48,7 +48,7 @@ class Match
         bots.each do |b|
           if b.dead?
             Rails.logger.debug "Game over! #{b.name} is dead"
-            MasterChannel.game_over()
+            MasterChannel.game_over(other_bot(b))
             Match.remove
             Thread.exit
           end
@@ -58,13 +58,12 @@ class Match
         next_bot = bots[next_move_by]
         if next_bot.result.present?
           MatchChannel.broadcast_to(next_bot, 'action' => 'response', 'result' => next_bot.result.to_s)
+          MasterChannel.update(bots, @map)
           next_bot.result = nil
           next_bot.save
         end
 
         REDIS.set('rubot_last_move', next_move_by)
-
-        MasterChannel.update(bots, @map)
 
         sleep 1
       end
@@ -72,71 +71,46 @@ class Match
 
   end
 
+  def scan2(bot, dx, dy)
+    front_tile = @map[bot.y + dy][bot.x + dx]
+    if front_tile == 0 || front_tile == 1
+      ob = other_bot(bot)
+      if (ob.x == bot.x + dx) && (ob.y == bot.y + dy)
+        return :enemy
+      else
+        return :empty
+      end
+    elsif front_tile == 9
+      return :wall
+    end
+  end
+
+
   def scan(bot)
     case bot.direction
     when 'left'
       if bot.x == 0
         return :wall
       else
-        front_tile = @map[bot.y][bot.x - 1]
-        if front_tile == 0 || front_tile == 1
-          op = other_bot(bot)
-          if op.x == bot.x - 1 && op.y = bot.y
-            return :enemy
-          else
-            return :empty
-          end
-        elsif front_tile == 9
-          return :wall
-        end
+        return scan2(bot, -1, 0)
       end
     when 'right'
-      if bot.x == @map_width
+      if bot.x == @map.first.count - 1
         return :wall
       else
-        front_tile = @map[bot.y][bot.x + 1]
-        if front_tile == 0 || front_tile == 1
-          op = other_bot(bot)
-          if op.x == bot.x + 1 && op.y = bot.y
-            return :enemy
-          else
-            return :empty
-          end
-        elsif front_tile == 9
-          return :wall
-        end
+        return scan2(bot, 1, 0)
       end
     when 'up'
       if bot.y == 0
         return :wall
       else
-        front_tile = @map[bot.y - 1][bot.x]
-        if front_tile == 0 || front_tile == 1
-          op = other_bot(bot)
-          if op.x == bot.x && op.y = bot.y - 1
-            return :enemy
-          else
-            return :empty
-          end
-        elsif front_tile == 9
-          return :wall
-        end
+        return scan2(bot, 0, -1)
       end
     when 'down'
-      if bot.y == @map_height
+      if bot.y == @map.count - 1
         return :wall
       else
-        front_tile = @map[bot.y + 1][bot.x]
-        if front_tile == 0 || front_tile == 1
-          op = other_bot(bot)
-          if op.x == bot.x && op.y = bot.y + 1
-            return :enemy
-          else
-            return :empty
-          end
-        elsif front_tile == 9
-          return :wall
-        end
+        return scan2(bot, 0, 1)
       end
     else
       puts "Unknown bot direction: #{bot.direction}"
@@ -144,9 +118,7 @@ class Match
   end
 
   def fire(bot)
-    if scan(bot) == :enemy
-      damage(other_bot(bot))
-    end
+    damage(other_bot(bot)) if scan(bot) == :enemy
     bot.result = true
     bot.save
   end
@@ -165,17 +137,16 @@ class Match
       when 'left'
         move(bot, -1, 0)
       when 'right'
-        move(bot, +1, 0)
+        move(bot, 1, 0)
       when 'up'
         move(bot, 0, -1)
       when 'down'
-        move(bot, 0, +1)
+        move(bot, 0, 1)
       end
     end
   end
 
   def turn(bot, direction)
-    @last_move_key = bot.key
     bot.turn(direction)
     bot.result = true
     bot.save

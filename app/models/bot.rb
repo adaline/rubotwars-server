@@ -1,6 +1,6 @@
 class Bot
   attr_reader :name, :key
-  attr_accessor :x, :y, :direction, :result, :lives
+  attr_accessor :x, :y, :direction, :result, :lives, :action
 
   DIRECTIONS = %w(left up right down)
 
@@ -35,7 +35,6 @@ class Bot
         new_index = 0
       end
     end
-    puts "New directoion index: #{new_index}"
     @direction = DIRECTIONS[new_index]
   end
 
