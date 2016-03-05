@@ -32,6 +32,8 @@ class Match
       b.save
     end
 
+    MasterChannel.start(@bots, @map)
+
     @bots.each do |b|
       MatchChannel.broadcast_to(b, 'action' => 'start')
     end
@@ -46,6 +48,7 @@ class Match
         bots.each do |b|
           if b.dead?
             Rails.logger.debug "Game over! #{b.name} is dead"
+            MasterChannel.game_over()
             Match.remove
             Thread.exit
           end
@@ -60,6 +63,8 @@ class Match
         end
 
         REDIS.set('rubot_last_move', next_move_by)
+
+        MasterChannel.update(bots, @map)
 
         sleep 1
       end
@@ -195,7 +200,7 @@ class Match
   private
 
   def other_bot(bot)
-    @bots.reject { |item| item == bot }.first
+    @bots.reject { |item| item.key == bot.key }.first
   end
 
   def damage(bot)

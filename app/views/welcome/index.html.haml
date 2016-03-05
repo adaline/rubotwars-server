@@ -7,17 +7,84 @@
   $ ->
     canvas = document.getElementById("game_canvas")
 
+    map = [
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0]
+    ]
+
+    bots = []
+
     $('#full_screen_link').on 'click', ->
       canvas.webkitRequestFullscreen()
+
+    canvas.addEventListener 'start', (e) ->
+      map = e.detail.map
+      bots = e.detail.bots
+
+    canvas.addEventListener 'update', (e) ->
+      map = e.detail.map
+      bots = e.detail.bots
 
     context = canvas.getContext("2d")
     context.clearRect(0, 0, canvas.width, canvas.height)
 
     bg_image = new Image()
     bg_image.src = "#{image_url("bg.png")}"
-    bg_image.onload = ->
-      context.drawImage(bg_image, 0, 0)
 
-%canvas#game_canvas{ width: '650', height: '480'}
+    block_image = new Image()
+    block_image.src = "#{image_url("block.png")}"
+
+    bot_sprites = new Image()
+    bot_sprites.src = "#{image_url("bots.png")}"
+
+    bg_loaded = false
+    bg_image.onload = ->
+      bg_loaded = true
+
+    block_loaded = false
+    block_image.onload = ->
+      block_loaded = true
+
+    bot_sprites_loaded = false
+    bot_sprites.onload = ->
+      bot_sprites_loaded = true
+
+    draw_map = (context, map) ->
+      for row, y in map
+        for tile, x in row
+          if tile == 9 && block_loaded
+            context.drawImage(block_image, x*40, y*40)
+
+    draw_bots = (context, bots) ->
+      if bots.length > 0 && bot_sprites_loaded
+        for bot, index in bots
+          switch bot.direction
+            when 'left'
+              context.drawImage(bot_sprites, 0, 0, 40, 40, bot.x * 40, bot.y * 40, 40, 40)
+            when 'up'
+              context.drawImage(bot_sprites, 0, 0, 40, 40, bot.x * 40, bot.y * 40, 40, 40)
+            when 'right'
+              context.drawImage(bot_sprites, 0, 0, 40, 40, bot.x * 40, bot.y * 40, 40, 40)
+            when 'down'
+              context.drawImage(bot_sprites, 0, 0, 40, 40, bot.x * 40, bot.y * 40, 40, 40)
+
+
+    draw = ->
+      context.drawImage(bg_image, 0, 0) if bg_loaded
+      draw_map(context, map)
+      draw_bots(context, bots)
+      requestAnimationFrame(draw)
+
+    draw()
+
+%canvas#game_canvas{ width: '400', height: '400'}
 
 %a#full_screen_link Full screen
