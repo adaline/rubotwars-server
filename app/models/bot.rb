@@ -1,6 +1,6 @@
 class Bot
   attr_reader :name, :key
-  attr_accessor :x, :y, :direction, :result, :lives, :action
+  attr_accessor :x, :y, :direction, :result, :lives, :acknowledged, :sent
 
   DIRECTIONS = %w(left up right down)
 
@@ -12,6 +12,8 @@ class Bot
     @y ||= 0
     @lives ||= 3
     @result ||= nil
+    @sent ||= false
+    @acknowledged ||= true
   end
 
   def save

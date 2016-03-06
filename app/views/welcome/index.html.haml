@@ -6,24 +6,23 @@
 :coffeescript
   $ ->
     canvas = document.getElementById("game_canvas")
+    context = canvas.getContext("2d")
 
     map = [
+      [1,0,0,0,0,0,0,0,0,0],
+      [0,9,0,0,0,0,0,0,9,0],
       [0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,0,0,0,0,0,0]
+      [0,9,0,0,0,0,0,0,9,0],
+      [0,0,0,0,0,0,0,0,0,1]
     ]
 
     bots = []
-
-    $('#full_screen_link').on 'click', ->
-      canvas.webkitRequestFullscreen()
+    bot_animations = {}
 
     canvas.addEventListener 'start', (e) ->
       map = e.detail.map
@@ -33,20 +32,23 @@
       map = e.detail.map
       bots = e.detail.bots
 
-    context = canvas.getContext("2d")
-    context.clearRect(0, 0, canvas.width, canvas.height)
+    canvas.addEventListener 'fire', (e) ->
+      bot = e.detail.bot
+      bot_animations[bot.key] = { index: 1, duration: 10 }
+
     images = {
-      bg: { data: null, url: "#{image_url("bg.png")}", loaded: false },
-      block: { data: null, url: "#{image_url("block.png")}", loaded: false },
-      bots: { data: null, url: "#{image_url("bots.png")}", loaded: false }
+      bg: { url: "#{image_url("bg.png")}"},
+      block: { url: "#{image_url("block.png")}"},
+      bots: { url: "#{image_url("bots.png")}"}
     }
 
     for k, v of images
-      v.data = new Image()
-      v.data.src = v.url
-      v.data.onload = ->
-        console.log v
-        v.loaded = true
+      image = new Image()
+      do (v) ->
+        image.onload = ->
+          v.loaded = true
+      image.src = v.url
+      v.data = image
 
     draw_map = (context, map) ->
       for row, y in map
@@ -58,10 +60,9 @@
       if bots.length > 0 && images.bots.loaded
         for bot, index in bots
           action_index = 0
-          if bot.action
-            switch bot.action
-              when 'fire'
-                action_index = 1
+          if bot_animations[bot.key] && bot_animations[bot.key].duration > 0
+            action_index = bot_animations[bot.key].index
+            bot_animations[bot.key].duration--
           bot_index = (index * 80) + (action_index * 40)
           switch bot.direction
             when 'right'
@@ -75,12 +76,16 @@
 
 
     draw = ->
+      context.clearRect(0, 0, canvas.width, canvas.height)
       context.drawImage(images.bg.data, 0, 0) if images.bg.loaded
       draw_map(context, map)
       draw_bots(context, bots)
       requestAnimationFrame(draw)
 
     draw()
+
+    $('#full_screen_link').on 'click', ->
+      canvas.webkitRequestFullscreen()
 
 %canvas#game_canvas{ width: '400', height: '400'}
 

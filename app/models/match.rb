@@ -4,15 +4,15 @@ class Match
   def initialize(bots)
     @map = [
       [1,0,0,9,0,0,0,0,0,0],
-      [0,0,0,9,0,0,0,9,0,0],
-      [0,0,1,9,0,0,0,0,0,0],
-      [9,9,9,9,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,9,0,0],
+      [0,0,0,9,0,0,0,0,0,0],
+      [0,0,9,0,0,0,0,0,0,9],
       [0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,0,0,0,0,0,0],
+      [9,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0],
       [0,0,9,0,0,0,0,9,0,0],
-      [0,0,0,0,0,0,0,0,0,0]
+      [0,0,0,0,0,0,0,0,0,1]
     ]
     @bots = bots
     @bot_keys = []
@@ -54,18 +54,26 @@ class Match
           end
         end
 
-        next_move_by = (last_move_index == 1) ? 0 : 1
-        next_bot = bots[next_move_by]
-        if next_bot.result.present?
-          MatchChannel.broadcast_to(next_bot, 'action' => 'response', 'result' => next_bot.result.to_s)
-          MasterChannel.update(bots, @map)
-          next_bot.result = nil
-          next_bot.save
+        if bots[last_move_index].sent == true && bots[last_move_index].acknowledged == false
+          last_bot = bots[last_move_index]
+          if last_bot.result.present?
+            MatchChannel.broadcast_to(last_bot, 'action' => 'response', 'result' => last_bot.result.to_s)
+            last_bot.sent = true
+            last_bot.save
+          end
+        else
+          next_move_by = (last_move_index == 1) ? 0 : 1
+          next_bot = bots[next_move_by]
+          if next_bot.result.present? && next_bot.sent == false
+            MatchChannel.broadcast_to(next_bot, 'action' => 'response', 'result' => next_bot.result.to_s)
+            MasterChannel.update(bots, @map)
+            next_bot.sent = true
+            next_bot.acknowledged = false
+            next_bot.save
+          end
         end
 
-        REDIS.set('rubot_last_move', next_move_by)
-
-        sleep 1
+        sleep 0.1
       end
     end
 
@@ -115,12 +123,14 @@ class Match
     else
       puts "Unknown bot direction: #{bot.direction}"
     end
+    MasterChannel.scan(bot)
   end
 
   def fire(bot)
     damage(other_bot(bot)) if scan(bot) == :enemy
     bot.result = true
     bot.save
+    MasterChannel.fire(bot)
   end
 
   def move_forward(bot)
@@ -176,7 +186,6 @@ class Match
 
   def damage(bot)
     bot.lives -= 1
-    puts "Bot taking damage, life is at #{bot.lives}!"
     bot.save
   end
 
