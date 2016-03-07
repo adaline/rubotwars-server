@@ -4,9 +4,9 @@ class Match
   def initialize(bots)
     @map = [
       [1,0,1,9,0,0,0,0,0,0],
-      [0,0,0,0,0,0,0,9,0,0],
+      [0,0,0,9,0,0,0,9,0,0],
       [0,0,0,9,0,0,0,0,0,0],
-      [0,0,9,0,0,0,0,0,0,9],
+      [9,9,9,0,0,0,0,0,0,9],
       [0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0],
       [9,0,0,0,0,0,0,0,0,0],
@@ -48,6 +48,7 @@ class Match
           if b.dead?
             Rails.logger.debug "Game over! #{b.name} is dead"
             MasterChannel.game_over(other_bot(b))
+            Match.disconnnect_bots
             Match.remove
             Thread.exit
           end
@@ -138,7 +139,9 @@ class Match
   def self.remove
     if Match.active?
       loaded_match = YAML::load(REDIS.get('rubot_match'))
-      loaded_match.bot_keys.each { |key| REDIS.del("rubot/#{key}") }
+      loaded_match.bot_keys.each do |key|
+        REDIS.del("rubot/#{key}")
+      end
       REDIS.del('rubot_match')
       REDIS.del('rubot_acknowledge_keys')
       REDIS.del('rubot_last_move')
@@ -147,6 +150,13 @@ class Match
 
   def self.active?
     REDIS.exists('rubot_match')
+  end
+
+  def self.disconnnect_bots
+    match = Match.load
+    match.bots.each do |bot|
+      ActionCable.server.remote_connections.where(bot: bot).disconnect
+    end
   end
 
   private
