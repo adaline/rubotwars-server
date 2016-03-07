@@ -1,6 +1,7 @@
 class Seek
   def self.create(bot)
     if opponent = REDIS.spop('seeks')
+      Match.remove
       match = Match.new([bot, Bot.load(opponent)])
       match.save
       match.start

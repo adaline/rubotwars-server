@@ -5,8 +5,12 @@ module ApplicationCable
 
     def connect
       if request.key?('HTTP_USER_KEY') && request.key?('HTTP_USER_NAME')
-        @bot = Bot.new(request.headers['HTTP_USER_NAME'], request.headers['HTTP_USER_KEY'])
-        @bot.save
+        if Match.active?
+          reject_unauthorized_connection
+        else
+          @bot = Bot.new(request.headers['HTTP_USER_NAME'], request.headers['HTTP_USER_KEY'])
+          @bot.save
+        end
       end
     end
   end

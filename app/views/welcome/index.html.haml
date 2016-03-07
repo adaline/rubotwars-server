@@ -8,6 +8,9 @@
     canvas = document.getElementById("game_canvas")
     context = canvas.getContext("2d")
 
+    window.AudioContext = window.AudioContext || window.webkitAudioContext
+    audio_context = new AudioContext()
+
     map = [
       [1,0,0,0,0,0,0,0,0,0],
       [0,9,0,0,0,0,0,0,9,0],
@@ -35,11 +38,22 @@
     canvas.addEventListener 'fire', (e) ->
       bot = e.detail.bot
       bot_animations[bot.key] = { index: 1, duration: 10 }
+      play_sound(sounds.punch)
+
+    canvas.addEventListener 'game_over', (e) ->
+      winner_bot = e.detail.winner
+      console.log "Winner: \#{winner_bot.name}"
+      play_sound(sounds.blast)
 
     images = {
-      bg: { url: "#{image_url("bg.png")}"},
-      block: { url: "#{image_url("block.png")}"},
+      bg: { url: "#{image_url("bg.png")}"}
+      block: { url: "#{image_url("block.png")}"}
       bots: { url: "#{image_url("bots.png")}"}
+    }
+
+    sounds = {
+      punch: { url: "#{image_url('punch.mp3')}" }
+      blast: { url: "#{image_url('blast.mp3')}" }
     }
 
     for k, v of images
@@ -49,6 +63,27 @@
           v.loaded = true
       image.src = v.url
       v.data = image
+
+    process_sound = (data, sound) ->
+      audio_context.decodeAudioData data, (buffer) ->
+        sound.buffer = buffer
+        sound.loaded = true
+
+    for k, v of sounds
+      request = new XMLHttpRequest()
+      request.open('GET', v.url, true)
+      request.responseType = 'arraybuffer'
+      do (v, request) ->
+        request.onload = ->
+          process_sound(request.response, v)
+      request.send()
+
+    play_sound = (sound) ->
+      if sound.loaded
+        source = audio_context.createBufferSource()
+        source.buffer = sound.buffer
+        source.connect(audio_context.destination)
+        source.start(0)
 
     draw_map = (context, map) ->
       for row, y in map

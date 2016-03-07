@@ -6,39 +6,36 @@ class MatchChannel < ApplicationCable::Channel
 
   def unsubscribed
     Seek.remove(bot)
+    Match.remove
   end
 
   def scan
-    log 'Scanning'
+    log 'Got scan'
     local_bot = fresh_bot
     local_bot.result = match.scan(local_bot)
     local_bot.save
   end
 
   def turn(data)
-    log 'Turning'
+    log 'Got turn'
     match.turn(fresh_bot, data['direction'].to_sym)
   end
 
   def move_forward
-    log 'Moving'
+    log 'Got move_forward'
     match.move_forward(fresh_bot)
   end
 
   def fire
-    log 'Firing'
+    log 'Got fire'
     match.fire(fresh_bot)
   end
 
-  def acknowledge
-    local_bot = fresh_bot
-    local_bot.sent = false
-    local_bot.result = nil
-    local_bot.acknowledged = true
-    local_bot.save
-    last_move_index = REDIS.get('rubot_last_move').to_i
-    next_move_by = (last_move_index == 1) ? 0 : 1
-    REDIS.set('rubot_last_move', next_move_by)
+  def acknowledge(data)
+    acknowledge_key = data['acknowledge_key']
+    if REDIS.sismember('rubot_acknowledge_keys', acknowledge_key)
+      REDIS.srem('rubot_acknowledge_keys', acknowledge_key)
+    end
   end
 
   private
@@ -52,6 +49,6 @@ class MatchChannel < ApplicationCable::Channel
   end
 
   def log(info)
-    Rails.logger.debug "#{bot.name}: #{info}"
+    Rails.logger.debug "#{bot.key}: #{info}"
   end
 end

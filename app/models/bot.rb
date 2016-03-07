@@ -10,14 +10,13 @@ class Bot
     @direction ||= DIRECTIONS.sample
     @x ||= 0
     @y ||= 0
-    @lives ||= 3
+    @lives ||= 10
     @result ||= nil
-    @sent ||= false
-    @acknowledged ||= true
   end
 
   def save
     REDIS.set("rubot/#{key}", YAML::dump(self))
+    REDIS.expire("rubot/#{key}", 360)
   end
 
   def self.load(key)
