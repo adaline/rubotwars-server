@@ -27,33 +27,19 @@
     bots = []
     bot_animations = {}
 
-    canvas.addEventListener 'start', (e) ->
-      map = e.detail.map
-      bots = e.detail.bots
-
-    canvas.addEventListener 'update', (e) ->
-      map = e.detail.map
-      bots = e.detail.bots
-
-    canvas.addEventListener 'fire', (e) ->
-      bot = e.detail.bot
-      bot_animations[bot.key] = { index: 1, duration: 10 }
-      play_sound(sounds.punch)
-
-    canvas.addEventListener 'game_over', (e) ->
-      winner_bot = e.detail.winner
-      console.log "Winner: \#{winner_bot.name}"
-      play_sound(sounds.blast)
-
     images = {
       bg: { url: "#{image_url("bg.png")}"}
       block: { url: "#{image_url("block.png")}"}
       bots: { url: "#{image_url("bots.png")}"}
+      title: { url: "#{image_url("title.png")}"}
+      gem: { url: "#{image_url("gem.png")}"}
     }
 
     sounds = {
       punch: { url: "#{image_url('punch.mp3')}" }
       blast: { url: "#{image_url('blast.mp3')}" }
+      game: { url: "#{image_url('game.ogg')}" }
+      title: { url: "#{image_url('title.ogg')}" }
     }
 
     for k, v of images
@@ -85,6 +71,63 @@
         source.connect(audio_context.destination)
         source.start(0)
 
+    title_loop_source = null
+    game_loop_source = null
+
+    play_title_loop = ->
+      if sounds.title.loaded
+        title_loop_source = audio_context.createBufferSource()
+        title_loop_source.buffer = sounds.title.buffer
+        title_loop_source.loop = true
+        title_loop_source.connect(audio_context.destination)
+        title_loop_source.start(0)
+    stop_title_loop = ->
+      if title_loop_source
+        title_loop_source.stop()
+        title_loop_source = null
+
+    play_game_loop = ->
+      if sounds.game.loaded
+        game_loop_source = audio_context.createBufferSource()
+        game_loop_source.buffer = sounds.game.buffer
+        game_loop_source.loop = true
+        game_loop_source.connect(audio_context.destination)
+        game_loop_source.start(0)
+    stop_game_loop = ->
+      if game_loop_source
+        game_loop_source.stop()
+        game_loop_source = null
+
+    restart_game = ->
+      stop_game_loop()
+      stop_title_loop()
+      bots = []
+      play_title_loop()
+
+    canvas.addEventListener 'start', (e) ->
+      stop_title_loop()
+      play_game_loop()
+      map = e.detail.map
+      bots = e.detail.bots
+
+    canvas.addEventListener 'update', (e) ->
+      stop_title_loop()
+      play_game_loop() unless game_loop_source
+      map = e.detail.map
+      bots = e.detail.bots
+
+    canvas.addEventListener 'fire', (e) ->
+      bot = e.detail.bot
+      bot_animations[bot.key] = { index: 1, duration: 10 }
+      play_sound(sounds.punch)
+
+    canvas.addEventListener 'game_over', (e) ->
+      stop_game_loop()
+      setTimeout(restart_game, 3000)
+      winner_bot = e.detail.winner
+      bots = [winner_bot]
+      play_sound(sounds.blast)
+
     draw_map = (context, map) ->
       for row, y in map
         for tile, x in row
@@ -109,19 +152,55 @@
             when 'down'
               context.drawImage(images.bots.data, 120, bot_index, 40, 40, bot.x * 40, bot.y * 40, 40, 40)
 
+    draw_bot_stats = (context, bots) ->
+      context.fillStyle = "#333"
+      context.textAlign = "left"
+      context.fillRect(400,0,600,400)
+      # Bot 1
+      if bots.length > 0
+        context.fillStyle="#fff"
+        context.font = "20px sans-serif"
+        context.fillText(bots[0].name, 420, 40)
+        context.drawImage(images.bots.data, 80, 0, 40, 40, 420, 60, 40, 40)
+        context.drawImage(images.gem.data, 420, 120)
+        context.font = "12px sans-serif"
+        context.fillText("x \#{bots[0].lives}", 450, 132)
+      # Bot 2
+      if bots.length > 1
+        context.font = "20px sans-serif"
+        context.fillText(bots[1].name, 420, 240)
+        context.drawImage(images.bots.data, 80, 80, 40, 40, 420, 260, 40, 40)
+        context.drawImage(images.gem.data, 420, 320)
+        context.font = "12px sans-serif"
+        context.fillText("x \#{bots[1].lives}", 450, 332)
+
 
     draw = ->
       context.clearRect(0, 0, canvas.width, canvas.height)
-      context.drawImage(images.bg.data, 0, 0) if images.bg.loaded
-      draw_map(context, map)
-      draw_bots(context, bots)
+      if bots.length > 1
+        context.drawImage(images.bg.data, 0, 0) if images.bg.loaded
+        draw_map(context, map)
+        draw_bot_stats(context, bots)
+        draw_bots(context, bots)
+      else if bots.length == 1
+        context.fillStyle="#000"
+        context.fillRect(0,0,600,400)
+        context.fillStyle = "#fff"
+        context.font = "40px sans-serif"
+        context.textAlign = "center"
+        context.fillText("Game Over", 300, 120)
+        context.font = "20px sans-serif"
+        context.fillText("\#{bots[0].name} wins!", 300, 160)
+      else
+        context.drawImage(images.title.data, 0, 0) if images.title.loaded
       requestAnimationFrame(draw)
 
     draw()
+    setTimeout(restart_game, 1000)
 
     $('#full_screen_link').on 'click', ->
       canvas.webkitRequestFullscreen()
 
-%canvas#game_canvas{ width: '400', height: '400'}
+%canvas#game_canvas{ width: '600', height: '400'}
 
 %a#full_screen_link Full screen
